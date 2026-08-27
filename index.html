@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英検3級 復習アプリ</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: sans-serif; background: #f5f7fa; color: #333; padding: 15px; max-width: 600px; margin: 0 auto; }
+        header { background: #2c3e50; color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
+        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .section-title { font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; }
+        .btn { background: #3498db; color: white; border: none; padding: 14px; font-size: 1rem; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
+        .passage-box { background: #f8f9fa; border-left: 4px solid #3498db; border-right: 1px solid #e2e8f0; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 15px; font-size: 0.95rem; line-height: 1.6; margin-bottom: 20px; border-radius: 6px; white-space: pre-wrap; word-break: break-word; }
+        .passage-label { font-size: 0.85rem; font-weight: bold; color: #3498db; margin-bottom: 6px; }
+        .question-meta { font-size: 0.85rem; color: #7f8c8d; margin-bottom: 8px; font-weight: bold; }
+        .question-text { font-size: 1.05rem; font-weight: bold; margin-bottom: 15px; white-space: pre-wrap; background: #fff8e1; padding: 12px; border-radius: 8px; border: 1px solid #ffe082; }
+        .option-btn { background: #f0f4f8; color: #2c3e50; border: 1px solid #dcdfe6; padding: 12px; font-size: 0.95rem; border-radius: 8px; margin-bottom: 10px; text-align: left; width: 100%; display: block; }
+        .result-box { margin-top: 15px; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; display: none; }
+        .correct { background: #d4edda; color: #155724; }
+        .incorrect { background: #f8d7da; color: #721c24; }
+        .hidden { display: none; }
+        .message-box { font-weight: bold; line-height: 1.6; margin: 20px 0; padding: 15px; border-radius: 8px; font-size: 1.05rem; white-space: pre-wrap; }
+        .streak-info { font-size: 0.9rem; color: #e67e22; font-weight: bold; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>英検3級 弱点克服アプリ</h1>
+        <p>間違えた問題だけを集中復習！</p>
+    </header>
+
+    <div id="menu-screen" class="card">
+        <div class="section-title">復習する大問を選択してください</div>
+        <button class="btn" onclick="startQuiz('d1')">大問1：語句空所補充（10問）</button>
+        <button class="btn" onclick="startQuiz('d2')">大問2：会話文補充（5問）</button>
+        <button class="btn" onclick="startQuiz('d3b')">大問3b：Eメール・手紙（2問）</button>
+        <button class="btn" onclick="startQuiz('d3c')">大問3c：長文読解（4問）</button>
+        <button class="btn" style="background:#27ae60;" onclick="startQuiz('all')">全問ランダム復習（21問）</button>
+        <div class="streak-info" id="streak-display" style="text-align:center; margin-top:10px;">現在の連続満点記録: 0回</div>
+    </div>
+
+    <div id="quiz-screen" class="card hidden">
+        <div class="question-meta" id="q-meta"></div>
+        
+        <!-- 長文全体表示エリア -->
+        <div class="hidden" id="q-passage-container">
+            <div class="passage-label">【本文（全文）】</div>
+            <div class="passage-box" id="q-passage"></div>
+        </div>
+        
+        <!-- 設問・選択肢エリア -->
+        <div class="question-meta" style="color:#2c3e50; margin-top:10px;">【設問】</div>
+        <div class="question-text" id="q-text"></div>
+        <div id="options-container"></div>
+        
+        <div id="result-box" class="result-box"></div>
+        <button id="next-btn" class="btn hidden" style="margin-top:15px; background:#e67e22;" onclick="nextQuestion()">次の問題へ</button>
+        <button class="btn" style="background:#95a5a6; margin-top:10px;" onclick="showMenu()">メニューに戻る</button>
+    </div>
+
+    <div id="result-screen" class="card hidden">
+        <div class="section-title" style="text-align:center;">テスト結果</div>
+        <p style="text-align:center; font-size: 1.2rem; font-weight: bold;" id="final-score"></p>
+        <div class="message-box" id="result-message"></div>
+        <button class="btn" style="background:#2c3e50;" onclick="showMenu()">確認（最初の画面に戻る）</button>
+    </div>
+
+<script>
+const quizData = [
+    { cat: "d1", meta: "大問1 (語句) - 1回目 (9)", text: "A: Where do you want to meet, Kate?\nB: Let's meet (   ) front of the flower shop.", options: ["1: on", "2: for", "3: in", "4: to"], ans: 3 },
+    { cat: "d1", meta: "大問1 (語句) - 1回目 (12)", text: "Mr. Jones has a meeting at 5:00. He has to leave (   ) now.", options: ["1: right", "2: some", "3: very", "4: also"], ans: 1 },
+    { cat: "d1", meta: "大問1 (語句) - 1回目 (13)", text: "A: Was this picture (   ) in Australia?\nB: Yes. My father sent it to me when he was working there.", options: ["1: took", "2: take", "3: taking", "4: taken"], ans: 4 },
+    { cat: "d1", meta: "大問1 (語句) - 1回目 (14)", text: "A: Mom, have you (   ) the mail yet today?\nB: Yes. You got a letter from Aunt Jen.", options: ["1: check", "2: checking", "3: to check", "4: checked"], ans: 4 },
+    { cat: "d1", meta: "大問1 (語句) - 2回目 (9)", text: "Jenny saw her grandparents (   ) the first time in years. She missed them very much.", options: ["1: for", "2: from", "3: out", "4: over"], ans: 1 },
+    { cat: "d1", meta: "大問1 (語句) - 2回目 (12)", text: "Yuki was looking (   ) to going to the concert with her friends.", options: ["1: right", "2: forward", "3: up", "4: after"], ans: 2 },
+    { cat: "d1", meta: "大問1 (語句) - 2回目 (13)", text: "A: Do you have anything (   )?\nB: Yes. I have some tea.", options: ["1: drank", "2: drinking", "3: to drink", "4: drinks"], ans: 3 },
+    { cat: "d1", meta: "大問1 (語句) - 2回目 (14)", text: "Nancy is happy because the tomato plant she has (   ) in her garden is very big.", options: ["1: grown", "2: grew", "3: grow", "4: grows"], ans: 1 },
+    { cat: "d1", meta: "大問1 (語句) - 2回目 (15)", text: "A: Bob, you washed the dog, (   ) you?\nB: No, Mom. I'll do it after dinner.", options: ["1: weren't", "2: couldn't", "3: didn't", "4: shouldn't"], ans: 3 },
+    { cat: "d1", meta: "大問1 (語句) - 3回目 (14)", text: "Ken watched TV until twelve o'clock last night. His mother told him (   ) to bed earlier.", options: ["1: going", "2: went", "3: to go", "4: goes"], ans: 3 },
+    { cat: "d2", meta: "大問2 (会話) - 1回目 (16)", text: "Customer: Could you make me a salad without tomatoes?\nWaitress: (   ) That's not a problem.", options: ["1: Luckily.", "2: Not so good.", "3: Congratulations.", "4: Anywhere."], ans: 1 },
+    { cat: "d2", meta: "大問2 (会話) - 1回目 (17)", text: "Man 1: Do you want to go jogging with me on the beach tomorrow?\nMan 2: OK, (   ) I usually get up early.", options: ["1: It was my mistake.", "2: Sounds good.", "3: The race is almost finished.", "4: I have to go stop that before."], ans: 2 },
+    { cat: "d2", meta: "大問2 (会話) - 1回目 (18)", text: "Son: Do you want to watch the soccer game today?\nFather: (   )", options: ["1: Who took this photo?", "2: Which team is your favorite player?", "3: Where do you want to start?", "4: Sure. Who is playing?"], ans: 4 },
+    { cat: "d2", meta: "大問2 (会話) - 1回目 (19)", text: "Girl 1: How are you going to the festival, Ann?\nGirl 2: My mom will take me. You can ride with us.\nGirl 1: (   ) Thanks.", options: ["1: I already did it.", "2: That sounds great.", "3: How's the sky.", "4: About ten kilometers."], ans: 2 },
+    { cat: "d2", meta: "大問2 (会話) - 3回目 (20)", text: "Man 1: Excuse me. I think you're wearing my jacket.\nMan 2: Oh, (   ) It looks like mine.", options: ["1: I'll speak to him now.", "2: I decided to go.", "3: What's the matter?", "4: I'm very sorry."], ans: 4 },
+    { cat: "d3b", meta: "大問3b (Eメール) - 3回目 (24)", passage: "From: Jill White\nTo: Bryan Fox\nSubject: Tokyo Trip\n\nHi Bryan,\nMy sister, Amy, lived in Tokyo for two years when she was a college student. She told me many great things about the city! If you go there, you should definitely visit the museums and parks.\n\nBest,\nJill", text: "How long did Amy live in Tokyo?", options: ["1: For one year.", "2: For two years.", "3: For four years.", "4: For ten years."], ans: 2 },
+    { cat: "d3b", meta: "大問3b (Eメール) - 3回目 (25)", passage: "From: Ann Smith (Grandma)\nTo: Judy Smith\nSubject: Yesterday\n\nDear Judy,\nThank you for calling me last night. By the way, your grandfather made a cake yesterday for your birthday practice! It was very delicious.\n\nLove,\nGrandma", text: "What did Judy's grandfather do yesterday?", options: ["1: He made a cake.", "2: He walked a dog.", "3: He visited a shop.", "4: He bought a sweater."], ans: 1 },
+    { cat: "d3c", meta: "大問3c (長文) - 1回目 (29)", passage: "The Three Sisters Method\n\nLong ago, Native Americans developed a unique farming technique known as the Three Sisters Method. In this method, corn, beans, and squash are planted together in the same area because they help each other grow.\n\nWhen Europeans came to North America, Native Americans taught them this method. It allowed new settlers to produce food efficiently during harsh seasons.", text: "What happened after Europeans came to North America?", options: ["1: Native Americans stopped growing vegetables.", "2: Native Americans taught the Three Sisters Method to Europeans.", "3: Native Americans used the method more.", "4: Europeans and Native Americans built new farms."], ans: 2 },
+    { cat: "d3c", meta: "大問3c (長文) - 1回目 (30)", passage: "The Three Sisters Method\n\nLong ago, Native Americans developed a unique farming technique known as the Three Sisters Method. In this method, corn, beans, and squash are planted together in the same area because they help each other grow.\n\nWhen Europeans came to North America, Native Americans taught them this method. It allowed new settlers to produce food efficiently during harsh seasons.", text: "What is the story about?", options: ["1: A new way to cook vegetables.", "2: A special way to grow crops.", "3: Three farmers who were sisters.", "4: Three women who started a food company."], ans: 2 },
+    { cat: "d3c", meta: "大問3c (長文) - 3回目 (27)", passage: "Notice: Garden Tour Event\n\nDate: October 18\nLocation: Historical House and Garden\n\nPlease bring your own lunch. We will have lunch together in the garden after the tour.\n\nNote: We want students to take photos of the garden but do not take photos inside the house.", text: "What must students do on October 18?", options: ["1: Clean the kitchen.", "2: Take pictures of the house.", "3: Bring their own lunch.", "4: Take an exam at school."], ans: 3 },
+    { cat: "d3c", meta: "大問3c (長文) - 3回目 (28)", passage: "Notice: Garden Tour Event\n\nDate: October 18\nLocation: Historical House and Garden\n\nPlease bring your own lunch. We will have lunch together in the garden after the tour.\n\nNote: We want students to take photos of the garden but do not take photos inside the house.", text: "Where can students take photos during the tour?", options: ["1: In the garden.", "2: In the kitchen.", "3: In the bedrooms.", "4: In the living room."], ans: 1 }
+];
+
+let currentQuestions = [], currentIndex = 0, score = 0;
+let perfectStreak = 0;
+
+function startQuiz(cat) {
+    currentQuestions = cat === 'all' ? [...quizData] : quizData.filter(q => q.cat === cat);
+    currentQuestions.sort(() => Math.random() - 0.5);
+    currentIndex = 0; score = 0;
+    document.getElementById('menu-screen').classList.add('hidden');
+    document.getElementById('result-screen').classList.add('hidden');
+    document.getElementById('quiz-screen').classList.remove('hidden');
+    showQuestion();
+}
+
+function showQuestion() {
+    const q = currentQuestions[currentIndex];
+    document.getElementById('q-meta').innerText = `${q.meta} (${currentIndex + 1}/${currentQuestions.length})`;
+    
+    const passageContainer = document.getElementById('q-passage-container');
+    const pEl = document.getElementById('q-passage');
+    
+    if (q.passage) {
+        pEl.innerText = q.passage;
+        passageContainer.classList.remove('hidden');
+    } else {
+        passageContainer.classList.add('hidden');
+    }
+    
+    document.getElementById('q-text').innerText = q.text;
+    const container = document.getElementById('options-container');
+    container.innerHTML = '';
+    q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = opt;
+        btn.onclick = () => checkAnswer(idx + 1);
+        container.appendChild(btn);
+    });
+    document.getElementById('result-box').style.display = 'none';
+    document.getElementById('next-btn').classList.add('hidden');
+    
+    // ページ上部へスクロール
+    window.scrollTo(0, 0);
+}
+
+function checkAnswer(selected) {
+    const q = currentQuestions[currentIndex];
+    const rBox = document.getElementById('result-box');
+    document.querySelectorAll('.option-btn').forEach(b => b.style.pointerEvents = 'none');
+    if (selected === q.ans) { score++; rBox.innerText = "⭕️ 正解！"; rBox.className = "result-box correct"; }
+    else { rBox.innerText = `❌ 不正解... （正解: ${q.ans}）`; rBox.className = "result-box incorrect"; }
+    rBox.style.display = 'block';
+    document.getElementById('next-btn').classList.remove('hidden');
+}
+
+function nextQuestion() {
+    currentIndex++;
+    if (currentIndex < currentQuestions.length) showQuestion();
+    else showResult();
+}
+
+function showResult() {
+    document.getElementById('quiz-screen').classList.add('hidden');
+    document.getElementById('result-screen').classList.remove('hidden');
+    
+    const total = currentQuestions.length;
+    const ratio = score / total;
+    const scoreText = `${total}問中 ${score}問 正解！`;
+    document.getElementById('final-score').innerText = scoreText;
+
+    const msgBox = document.getElementById('result-message');
+    
+    if (score === total) {
+        perfectStreak++;
+        if (perfectStreak >= 10) {
+            msgBox.innerText = "10回連続満点達成！🎉\nやり遂げましたね悠詞！これでこの問題はもう大丈夫。";
+            msgBox.style.background = "#ffeaa7";
+            msgBox.style.color = "#d35400";
+        } else {
+            msgBox.innerText = `やったね！10回連続で満点取ったら何かが変わるかも！？\n（現在: ${perfectStreak}回連続満点！）`;
+            msgBox.style.background = "#d4edda";
+            msgBox.style.color = "#155724";
+        }
+    } else {
+        perfectStreak = 0;
+        if (ratio < 2/3) {
+            msgBox.innerText = "学習という言葉を知っていますか？悠詞の頭が心配です。至急脳神経外科の受診をお勧めします。";
+            msgBox.style.background = "#f8d7da";
+            msgBox.style.color = "#721c24";
+        } else {
+            msgBox.innerText = "この結果で満足する子に育てた覚えはありません。満点を目指してください。";
+            msgBox.style.background = "#fff3cd";
+            msgBox.style.color = "#856404";
+        }
+    }
+    
+    document.getElementById('streak-display').innerText = `現在の連続満点記録: ${perfectStreak}回`;
+    window.scrollTo(0, 0);
+}
+
+function showMenu() {
+    document.getElementById('quiz-screen').classList.add('hidden');
+    document.getElementById('result-screen').classList.add('hidden');
+    document.getElementById('menu-screen').classList.remove('hidden');
+    window.scrollTo(0, 0);
+}
+</script>
+</body>
+</html>
